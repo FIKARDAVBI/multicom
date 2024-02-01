@@ -1,0 +1,246 @@
+#include <RF24Network.h>
+#include <RF24.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <INA226.h>
+
+#define inaaddress 0x44
+#define button 2
+#define led A3
+#define topology_T  //T untuk Tree,
+//#define topology_S //S untuk Star,
+//#define topology_D //D untuk tree lain
+#define protocol_R  //R untuk request based timer up dan downlink
+//#define protocol_B //B untuk roundrobin and append hanya uplink
+#include <LiquidCrystal_I2C.h>
+
+const uint16_t this_node = 00;
+
+RF24 radio(10, 9);           // nRF24L01 (CE,CSN)
+RF24Network network(radio);  // Include the radio in the network
+INA226 ina;
+float energy;
+float pwr;
+
+#ifdef topology_T  // konfigurasi address topology tree
+const uint16_t node01 = 01;
+const uint16_t node02 = 02;
+const uint16_t node03 = 011;
+const uint16_t node04 = 021;
+const uint16_t node05 = 012;
+const uint16_t node06 = 022;
+const uint8_t n1 = 1;
+const uint8_t n2 = 2;
+const uint8_t n3 = 9;
+const uint8_t n4 = 17;
+const uint8_t n5 = 10;
+const uint8_t n6 = 18;
+#elif defined(topology_S)  // konfigurasi address topology star
+const uint16_t node01 = 01;
+const uint16_t node02 = 02;
+const uint16_t node03 = 03;
+const uint16_t node04 = 04;
+const uint16_t node05 = 05;
+const uint16_t node06 = 015;
+const uint8_t n1 = 1;
+const uint8_t n2 = 2;
+const uint8_t n3 = 3;
+const uint8_t n4 = 4;
+const uint8_t n5 = 5;
+const uint8_t n6 = 13;
+#else                      // konfigurasi address topology tree lainnya
+const uint16_t node01 = 01;
+const uint16_t node02 = 02;
+const uint16_t node03 = 011;
+const uint16_t node04 = 012;
+const uint16_t node05 = 0111;
+const uint16_t node06 = 0112;
+const uint8_t n1 = 1;
+const uint8_t n2 = 2;
+const uint8_t n3 = 9;
+const uint8_t n4 = 17;
+const uint8_t n5 = 73;
+const uint8_t n6 = 74;
+#endif
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+unsigned char databuffer[MAX_PAYLOAD_SIZE];
+unsigned char datareq = 'R';
+uint16_t payloadSize;
+unsigned long timer;
+unsigned long timer2;
+int count = 0;
+int interval = 1000;
+const int samplingtime = 100;
+int packetsent = 0;
+int packetreceive = 0;
+
+struct datatosend_t {
+  float node1;
+  float node2;
+  float node3;
+  float node4;
+  float node5;
+  float node6;
+};
+datatosend_t datatosend;
+
+
+void handlingdata(){
+  while (network.available()) {  // Is there anything ready for us?
+    RF24NetworkHeader header;  // If so, take a look at it
+    payloadSize = network.peek(header);
+    memset(databuffer, 0, sizeof(databuffer));
+    packetreceive++;
+    switch (header.from_node) {  // Dispatch the message to the correct handler.
+      case n1:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node1 = atof(databuffer);
+        break;}
+      case n2:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node2 = atof(databuffer);
+        break;}
+      case n3:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node3 = atof(databuffer);
+        break; }
+      case n4:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node4 = atof(databuffer);
+        break;}
+      case n5:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node5 = atof(databuffer);
+        break;}
+      case n6:
+        {network.read(header, &databuffer, payloadSize);
+        datatosend.node6 = atof(databuffer);
+        break;}
+      default:
+        {Serial.println(header.from_node);
+        network.read(header, 0, 0);
+        break;}
+    }
+  }
+}
+
+void requestdata(){
+  if(millis()-timer > interval){
+    timer = millis();
+    if(count++ != 7) packetsent++;
+    switch(count){
+      case 1:{
+        RF24NetworkHeader header2(node01);
+        datatosend.node1 = 0.0;
+        bool ok = network.write(header2, &datareq, sizeof(datareq));
+        break;}
+      case 2:{
+        RF24NetworkHeader header3(node02);
+        datatosend.node2 = 0.0;
+        bool ok2 = network.write(header3, &datareq, sizeof(datareq));
+        break;}
+      case 3:{
+        datatosend.node3 = 0.0;
+        RF24NetworkHeader header4(node03);
+        bool ok3 = network.write(header4, &datareq, sizeof(datareq));
+        break;}
+      case 4:{
+        RF24NetworkHeader header5(node04);
+        datatosend.node4 = 0.0;
+        bool ok4 = network.write(header5, &datareq, sizeof(datareq));
+        break;}
+      case 5:{
+        RF24NetworkHeader header6(node05);
+        datatosend.node5 = 0.0;
+        bool ok5 = network.write(header6, &datareq, sizeof(datareq));
+        break;}
+      case 6:{
+        RF24NetworkHeader header7(node06);
+        datatosend.node6 = 0.0;
+        bool ok6 = network.write(header7, &datareq, sizeof(datareq));
+        break;}
+      case 7:{
+        Serial.println("N1:"+ (String)datatosend.node1 + ",N2:"+(String)datatosend.node2+",N3:"+(String)datatosend.node3+",N4:"+(String)datatosend.node4+",N5:"+(String)datatosend.node5+",N6:"+(String)datatosend.node6);
+        count=0;
+        break;}
+    }
+  }
+}
+
+void handlingappendeddata(){
+  while(network.available()){
+    RF24NetworkHeader header;  // If so, take a look at it
+    payloadSize = network.peek(header);
+    memset(databuffer, 0, sizeof(databuffer));
+    packetreceive++;
+    switch (header.from_node) {
+      case 1:
+        {network.read(header,&databuffer,payloadSize);
+        delay(100);
+        Serial.write((char)databuffer+'\n');
+        break;}
+      default:
+        {network.read(header, 0,0);}
+        break;
+    }
+  }
+}
+
+void ambildatapower(){
+  if(millis()-timer2 > samplingtime){
+    pwr = ina.readBusPower();
+    energy += pwr/(3600000/samplingtime);
+  }
+}
+
+void tampillcd(){
+   lcd.setCursor(0, 0);
+   lcd.print("P: ");
+   lcd.setCursor(3, 0);
+   lcd.print(energy,2);
+   lcd.setCursor(9, 0);
+   lcd.print("S: ");
+   lcd.setCursor(12,0);
+   lcd.print(packetsent);
+   lcd.setCursor(0, 1);
+   lcd.print("R: ");
+   lcd.setCursor(3, 1);
+   lcd.print(packetreceive);
+   lcd.setCursor(9, 1);
+   lcd.print("N: ");
+   lcd.setCursor(12,1);
+   lcd.print("6");
+}
+
+void setup() {
+  ina.begin(inaaddress);
+  ina.configure(INA226_AVERAGES_1, INA226_BUS_CONV_TIME_1100US, INA226_SHUNT_CONV_TIME_1100US, INA226_MODE_SHUNT_BUS_CONT);
+  ina.calibrate(0.01, 4);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Master");
+  delay(1000);
+  lcd.clear();
+  SPI.begin();
+  radio.begin();
+  network.begin(90, this_node);  //(channel, node address)
+  radio.setDataRate(RF24_2MBPS);
+  Serial.begin(9600);
+  timer = millis();
+  timer2 = millis();
+}
+
+void loop() {
+  network.update();
+
+#ifdef protocol_R
+  handlingdata();
+  requestdata();
+#else
+  handlingappendeddata();
+#endif
+  ambildatapower();
+  tampillcd();
+}
