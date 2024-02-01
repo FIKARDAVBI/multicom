@@ -2,6 +2,16 @@
 #include <RF24.h>
 #include <SPI.h>
 #include <stdio.h>
+#include <Wire.h>
+#include <INA226.h>
+#include <LiquidCrystal_I2C.h>
+
+#define inaaddress 0x44
+INA226 ina;
+float energy;
+float pwr;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 RF24 radio(10, 9);           // nRF24L01 (CE,CSN)
 RF24Network network(radio);  // Include the radio in the network
@@ -44,6 +54,10 @@ unsigned char databuffer[MAX_PAYLOAD_SIZE];
 float flow = 5.45;
 unsigned char datatosend[MAX_PAYLOAD_SIZE];
 uint16_t payloadSize;
+const int samplingtime = 100;
+unsigned long timer2;
+int packetsent = 0;
+int packetreceive = 0;
 
 void handlingdata(){
   while (network.available()) {  // Is there anything ready for us?
@@ -51,12 +65,14 @@ void handlingdata(){
     payloadSize = network.peek(header);
     memset(databuffer, 0, sizeof(databuffer));
     memset(datatosend, 0, sizeof(datatosend));
+    packetreceive++;
     switch (header.from_node) {
       case 00:
         {network.read(header,&databuffer,payloadSize);
         delay(100);
         RF24NetworkHeader header2(master);
         sprintf(datatosend,"%f",flow);
+        packetsent++;
         bool ok = network.write(header2,&datatosend,sizeof(datatosend));
         break;}
       default:
@@ -72,12 +88,14 @@ void appendforward(){
     payloadSize = network.peek(header);
     memset(databuffer, 0, sizeof(databuffer));
     memset(datatosend, 0, sizeof(datatosend));
+    packetreceive++;
     switch (header.from_node) {
       case prevnode:
         {network.read(header,&databuffer,payloadSize);
         sprintf(datatosend,"%s,%f",databuffer,flow);
         delay(100);
         RF24NetworkHeader header3(node04);
+        packetsent++;
         bool ok = network.write(header3,&datatosend,sizeof(datatosend));
         break;}
       default:
@@ -87,11 +105,47 @@ void appendforward(){
   }
 }
 
+void ambildatapower(){
+  if(millis()-timer2 > samplingtime){
+    pwr = ina.readBusPower();
+    energy += pwr/(3600000/samplingtime);
+  }
+}
+
+void tampillcd(){
+   lcd.setCursor(0, 0);
+   lcd.print("P: ");
+   lcd.setCursor(3, 0);
+   lcd.print(energy,2);
+   lcd.setCursor(9, 0);
+   lcd.print("S: ");
+   lcd.setCursor(12,0);
+   lcd.print(packetsent);
+   lcd.setCursor(0, 1);
+   lcd.print("R: ");
+   lcd.setCursor(3, 1);
+   lcd.print(packetreceive);
+   lcd.setCursor(9, 1);
+   lcd.print("F: ");
+   lcd.setCursor(12,1);
+   lcd.print(flow);
+}
+
 void setup() {
+  ina.begin(inaaddress);
+  ina.configure(INA226_AVERAGES_1, INA226_BUS_CONV_TIME_1100US, INA226_SHUNT_CONV_TIME_1100US, INA226_MODE_SHUNT_BUS_CONT);
+  ina.calibrate(0.01, 4);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Node5");
+  delay(1000);
+  lcd.clear();
   SPI.begin();
   radio.begin();
   network.begin(90, this_node);  //(channel, node address)
   radio.setDataRate(RF24_2MBPS);
+  timer2 = millis();
 }
 
 void loop() {
@@ -102,29 +156,6 @@ void loop() {
 #else
   appendforward();
 #endif
-
-/*
-#ifdef topology_T
-  #ifdef protocol_R
-  #else
-  #endif
-#elif defined(topology_S)
-  #ifdef protocol_R
-  handlingdata();
-  #else
-  #endif
-#else
-  #ifdef protocol_R
-  handlingdata();
-  #else
-  #endif
-#endif*/
-  /*
-  //===== Sending =====//
-  unsigned long now = millis();
-  if (now - last_sent >= interval) {   // If it's time to send a data, send it!
-    last_sent = now;
-    RF24NetworkHeader header(master00);   // (Address where the data is going)
-    bool ok = network.write(header, &databuffer, sizeof(databuffer)); // Send the data
-  }*/
+  ambildatapower();
+  tampillcd();
 }
