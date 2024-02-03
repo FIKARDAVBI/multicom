@@ -63,6 +63,9 @@ const uint8_t n5 = 73;
 const uint8_t n6 = 74;
 #endif
 
+#define dummyflow
+//#define sensorflow
+
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 unsigned char databuffer[MAX_PAYLOAD_SIZE];
 unsigned char datareq = 'R';
@@ -75,13 +78,25 @@ const int samplingtime = 100;
 int packetsent = 0;
 int packetreceive = 0;
 
+#ifdef dummyflow
+double flow = 0.45;
+#else
+const int intervalflow = 100;
+double flow = 0.00;
+int faktorkalibrasi = 170;
+float kalibrasi;
+#endif
+
+volatile int NumPulses = 0;
+unsigned long prevmillis;
+
 struct datatosend_t {
-  float node1;
-  float node2;
-  float node3;
-  float node4;
-  float node5;
-  float node6;
+  double node1;
+  double node2;
+  double node3;
+  double node4;
+  double node5;
+  double node6;
 };
 datatosend_t datatosend;
 
@@ -161,11 +176,15 @@ void requestdata(){
         bool ok6 = network.write(header7, &datareq, sizeof(datareq));
         break;}
       case 7:{
-        Serial.println("N1:"+ (String)datatosend.node1 + ",N2:"+(String)datatosend.node2+",N3:"+(String)datatosend.node3+",N4:"+(String)datatosend.node4+",N5:"+(String)datatosend.node5+",N6:"+(String)datatosend.node6);
+        Serial.println((String)datatosend.node1 + ","+(String)datatosend.node2+","+(String)datatosend.node3+","+(String)datatosend.node4+","+(String)datatosend.node5+","+(String)datatosend.node6+","+(String)flow);
         count=0;
         break;}
     }
   }
+}
+
+void PulseCount() {
+  NumPulses++;
 }
 
 void handlingappendeddata(){
@@ -178,7 +197,8 @@ void handlingappendeddata(){
       case 1:
         {network.read(header,&databuffer,payloadSize);
         delay(100);
-        Serial.write((char)databuffer+'\n');
+        Serial.write((char)databuffer);
+        Serial.println(","+(String)flow);
         break;}
       default:
         {network.read(header, 0,0);}
@@ -208,12 +228,16 @@ void tampillcd(){
    lcd.setCursor(3, 1);
    lcd.print(packetreceive);
    lcd.setCursor(9, 1);
-   lcd.print("N: ");
+   lcd.print("F: ");
    lcd.setCursor(12,1);
-   lcd.print("6");
+   lcd.print(flow,2);
 }
 
 void setup() {
+#ifdef sensorflow
+  attachInterrupt(1, PulseCount, RISING);
+  kalibrasi = (float)faktorkalibrasi / 83;
+#endif
   ina.begin(inaaddress);
   ina.configure(INA226_AVERAGES_1, INA226_BUS_CONV_TIME_1100US, INA226_SHUNT_CONV_TIME_1100US, INA226_MODE_SHUNT_BUS_CONT);
   ina.calibrate(0.01, 4);
@@ -230,10 +254,22 @@ void setup() {
   Serial.begin(9600);
   timer = millis();
   timer2 = millis();
+  prevmillis = micros();
 }
 
 void loop() {
   network.update();
+
+#ifdef sensorflow
+  if (micros() - prevmillis > intervalflow) {
+    detachInterrupt(1);
+    float flowRate = (float)NumPulses / kalibrasi;
+    prevmillis = micros();
+    attachInterrupt(1, PulseCount, RISING);
+    float flowLitres = (flowRate / 60);
+    flow += flowLitres;
+  }
+#endif
 
 #ifdef protocol_R
   handlingdata();

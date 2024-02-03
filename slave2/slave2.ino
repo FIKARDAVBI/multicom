@@ -46,16 +46,30 @@ const uint16_t node05 = 0111;
 const uint16_t node06 = 0112;
 #endif
 
+#define dummyflow
+//#define sensorflow
+
 const unsigned long interval = 500;  //ms  // How often to send data to the other unit
 unsigned long last_sent;            // When did we last send?
 unsigned char databuffer[MAX_PAYLOAD_SIZE];
-float flow = 2.45;
 unsigned char datatosend[MAX_PAYLOAD_SIZE];
 uint16_t payloadSize;
+
+#ifdef dummyflow
+double flow = 2.45;
+#else
+const int intervalflow = 100;
+double flow = 0.00;
+int faktorkalibrasi = 170;
+float kalibrasi;
+#endif
+
 const int samplingtime = 100;
 unsigned long timer2;
 int packetsent = 0;
 int packetreceive = 0;
+volatile int NumPulses = 0;
+unsigned long prevmillis;
 
 void handlingdata(){
   while (network.available()) {  // Is there anything ready for us?
@@ -103,6 +117,10 @@ void appendforward(){
   }
 }
 
+void PulseCount() {
+  NumPulses++;
+}
+
 void ambildatapower(){
   if(millis()-timer2 > samplingtime){
     pwr = ina.readBusPower();
@@ -130,13 +148,17 @@ void tampillcd(){
 }
 
 void setup() {
+#ifdef sensorflow
+  attachInterrupt(1, PulseCount, RISING);
+  kalibrasi = (float)faktorkalibrasi / 83;
+#endif
   ina.begin(inaaddress);
   ina.configure(INA226_AVERAGES_1, INA226_BUS_CONV_TIME_1100US, INA226_SHUNT_CONV_TIME_1100US, INA226_MODE_SHUNT_BUS_CONT);
   ina.calibrate(0.01, 4);
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
-  lcd.print("Node5");
+  lcd.print("Node2");
   delay(1000);
   lcd.clear();
   SPI.begin();
@@ -144,10 +166,22 @@ void setup() {
   network.begin(90, this_node);  //(channel, node address)
   radio.setDataRate(RF24_2MBPS);
   timer2=millis();
+  prevmillis = micros();
 }
 
 void loop() {
   network.update();
+
+#ifdef sensorflow
+  if (micros() - prevmillis > intervalflow) {
+    detachInterrupt(1);
+    float flowRate = (float)NumPulses / kalibrasi;
+    prevmillis = micros();
+    attachInterrupt(1, PulseCount, RISING);
+    float flowLitres = (flowRate / 60);
+    flow += flowLitres;
+  }
+#endif
 
 #ifdef protocol_R
   handlingdata();

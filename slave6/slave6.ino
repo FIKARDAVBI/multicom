@@ -48,16 +48,30 @@ const uint16_t node05 = 0111;
 const uint16_t this_node = 0112;
 #endif
 
+#define dummyflow
+//#define sensorflow
+
 const unsigned long interval = 12000;  //ms  // How often to send data to the other unit
 unsigned long last_sent;               // When did we last send?
 unsigned char databuffer[MAX_PAYLOAD_SIZE];
 unsigned char datatosend[MAX_PAYLOAD_SIZE];
 uint16_t payloadSize;
-float flow = 6.45;
+
+#ifdef dummyflow
+double flow = 6.45;
+#else
+const int intervalflow = 100;
+double flow = 0.00;
+int faktorkalibrasi = 170;
+float kalibrasi;
+#endif
+
 const int samplingtime = 100;
 unsigned long timer2;
+unsigned long prevmillis;
 int packetsent = 0;
 int packetreceive = 0;
+volatile int NumPulses = 0;
 
 
 void handlingdata() {
@@ -87,33 +101,41 @@ void handlingdata() {
   }
 }
 
-void ambildatapower(){
-  if(millis()-timer2 > samplingtime){
+void ambildatapower() {
+  if (millis() - timer2 > samplingtime) {
     pwr = ina.readBusPower();
-    energy += pwr/(3600000/samplingtime);
+    energy += pwr / (3600000 / samplingtime);
   }
 }
 
-void tampillcd(){
-   lcd.setCursor(0, 0);
-   lcd.print("P: ");
-   lcd.setCursor(3, 0);
-   lcd.print(energy,2);
-   lcd.setCursor(9, 0);
-   lcd.print("S: ");
-   lcd.setCursor(12,0);
-   lcd.print(packetsent);
-   lcd.setCursor(0, 1);
-   lcd.print("R: ");
-   lcd.setCursor(3, 1);
-   lcd.print(packetreceive);
-   lcd.setCursor(9, 1);
-   lcd.print("F: ");
-   lcd.setCursor(12,1);
-   lcd.print(flow);
+void tampillcd() {
+  lcd.setCursor(0, 0);
+  lcd.print("P: ");
+  lcd.setCursor(3, 0);
+  lcd.print(energy, 2);
+  lcd.setCursor(9, 0);
+  lcd.print("S: ");
+  lcd.setCursor(12, 0);
+  lcd.print(packetsent);
+  lcd.setCursor(0, 1);
+  lcd.print("R: ");
+  lcd.setCursor(3, 1);
+  lcd.print(packetreceive);
+  lcd.setCursor(9, 1);
+  lcd.print("F: ");
+  lcd.setCursor(12, 1);
+  lcd.print(flow);
+}
+
+void PulseCount() {
+  NumPulses++;
 }
 
 void setup() {
+#ifdef sensorflow
+  attachInterrupt(1, PulseCount, RISING);
+  kalibrasi = (float)faktorkalibrasi / 83;
+#endif
   ina.begin(inaaddress);
   ina.configure(INA226_AVERAGES_1, INA226_BUS_CONV_TIME_1100US, INA226_SHUNT_CONV_TIME_1100US, INA226_MODE_SHUNT_BUS_CONT);
   ina.calibrate(0.01, 4);
@@ -129,10 +151,22 @@ void setup() {
   radio.setDataRate(RF24_2MBPS);
   timer = millis();
   timer2 = millis();
+  prevmillis = micros();
 }
 
 void loop() {
   network.update();
+
+#ifdef sensorflow
+  if (micros() - prevmillis > intervalflow) {
+    detachInterrupt(1);
+    float flowRate = (float)NumPulses / kalibrasi;
+    prevmillis = micros();
+    attachInterrupt(1, PulseCount, RISING);
+    float flowLitres = (flowRate / 60);
+    flow += flowLitres;
+  }
+#endif
 
 #ifdef protocol_R
   handlingdata();
