@@ -6,7 +6,7 @@
 #include <INA226.h>
 #include <LiquidCrystal_I2C.h>
 
-#define inaaddress 0x44
+#define inaaddress 0x40
 INA226 ina;
 float energy;
 float pwr;
@@ -132,21 +132,21 @@ void ambildatapower(){
 
 void tampillcd(){
    lcd.setCursor(0, 0);
-   lcd.print("P: ");
-   lcd.setCursor(3, 0);
+   lcd.print("P:");
+   lcd.setCursor(2, 0);
    lcd.print(energy,2);
-   lcd.setCursor(9, 0);
-   lcd.print("S: ");
-   lcd.setCursor(12,0);
+   lcd.setCursor(8, 0);
+   lcd.print("S:");
+   lcd.setCursor(10,0);
    lcd.print(packetsent);
    lcd.setCursor(0, 1);
-   lcd.print("R: ");
-   lcd.setCursor(3, 1);
+   lcd.print("R:");
+   lcd.setCursor(2, 1);
    lcd.print(packetreceive);
-   lcd.setCursor(9, 1);
-   lcd.print("F: ");
-   lcd.setCursor(12,1);
-   lcd.print(flow);
+   lcd.setCursor(8, 1);
+   lcd.print("F:");
+   lcd.setCursor(10,1);
+   lcd.print(flow,2);
 }
 
 void setup() {

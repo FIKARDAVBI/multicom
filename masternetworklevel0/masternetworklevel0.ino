@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <INA226.h>
 
-#define inaaddress 0x44
+#define inaaddress 0x40
 #define button 2
 #define led A3
 #define topology_T  //T untuk Tree,
@@ -29,12 +29,12 @@ const uint16_t node03 = 011;
 const uint16_t node04 = 021;
 const uint16_t node05 = 012;
 const uint16_t node06 = 022;
-const uint8_t n1 = 1;
-const uint8_t n2 = 2;
-const uint8_t n3 = 9;
-const uint8_t n4 = 17;
-const uint8_t n5 = 10;
-const uint8_t n6 = 18;
+const uint16_t n1 = 1;
+const int n2 = 2;
+const int n3 = 9;
+const int n4 = 17;
+const int n5 = 10;
+const int n6 = 18;
 #elif defined(topology_S)  // konfigurasi address topology star
 const uint16_t node01 = 01;
 const uint16_t node02 = 02;
@@ -105,11 +105,11 @@ void handlingdata(){
   while (network.available()) {  // Is there anything ready for us?
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
     packetreceive++;
     switch (header.from_node) {  // Dispatch the message to the correct handler.
-      case n1:
+      case 1:
         {network.read(header, &databuffer, payloadSize);
+        Serial.println((char)databuffer[0]);
         datatosend.node1 = atof(databuffer);
         break;}
       case n2:
@@ -143,36 +143,30 @@ void handlingdata(){
 void requestdata(){
   if(millis()-timer > interval){
     timer = millis();
-    if(count++ != 7) packetsent++;
+    if(count++ != 6) packetsent++;
     switch(count){
       case 1:{
         RF24NetworkHeader header2(node01);
-        datatosend.node1 = 0.0;
         bool ok = network.write(header2, &datareq, sizeof(datareq));
         break;}
       case 2:{
         RF24NetworkHeader header3(node02);
-        datatosend.node2 = 0.0;
         bool ok2 = network.write(header3, &datareq, sizeof(datareq));
         break;}
       case 3:{
-        datatosend.node3 = 0.0;
         RF24NetworkHeader header4(node03);
         bool ok3 = network.write(header4, &datareq, sizeof(datareq));
         break;}
       case 4:{
         RF24NetworkHeader header5(node04);
-        datatosend.node4 = 0.0;
         bool ok4 = network.write(header5, &datareq, sizeof(datareq));
         break;}
       case 5:{
         RF24NetworkHeader header6(node05);
-        datatosend.node5 = 0.0;
         bool ok5 = network.write(header6, &datareq, sizeof(datareq));
         break;}
       case 6:{
         RF24NetworkHeader header7(node06);
-        datatosend.node6 = 0.0;
         bool ok6 = network.write(header7, &datareq, sizeof(datareq));
         break;}
       case 7:{
@@ -216,20 +210,20 @@ void ambildatapower(){
 
 void tampillcd(){
    lcd.setCursor(0, 0);
-   lcd.print("P: ");
-   lcd.setCursor(3, 0);
+   lcd.print("P:");
+   lcd.setCursor(2, 0);
    lcd.print(energy,2);
-   lcd.setCursor(9, 0);
-   lcd.print("S: ");
-   lcd.setCursor(12,0);
+   lcd.setCursor(8, 0);
+   lcd.print("S:");
+   lcd.setCursor(10,0);
    lcd.print(packetsent);
    lcd.setCursor(0, 1);
-   lcd.print("R: ");
-   lcd.setCursor(3, 1);
+   lcd.print("R:");
+   lcd.setCursor(2, 1);
    lcd.print(packetreceive);
-   lcd.setCursor(9, 1);
-   lcd.print("F: ");
-   lcd.setCursor(12,1);
+   lcd.setCursor(8, 1);
+   lcd.print("F:");
+   lcd.setCursor(10,1);
    lcd.print(flow,2);
 }
 
@@ -272,8 +266,8 @@ void loop() {
 #endif
 
 #ifdef protocol_R
-  handlingdata();
   requestdata();
+  handlingdata();
 #else
   handlingappendeddata();
 #endif
