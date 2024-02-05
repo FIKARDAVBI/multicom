@@ -30,11 +30,11 @@ const uint16_t node04 = 021;
 const uint16_t node05 = 012;
 const uint16_t node06 = 022;
 const uint16_t n1 = 1;
-const int n2 = 2;
-const int n3 = 9;
-const int n4 = 17;
-const int n5 = 10;
-const int n6 = 18;
+const uint8_t n2 = 2;
+const uint8_t n3 = 9;
+const uint8_t n4 = 17;
+const uint8_t n5 = 10;
+const uint8_t n6 = 18;
 #elif defined(topology_S)  // konfigurasi address topology star
 const uint16_t node01 = 01;
 const uint16_t node02 = 02;
@@ -101,78 +101,83 @@ struct datatosend_t {
 datatosend_t datatosend;
 
 
-void handlingdata(){
+void handlingdata() {
   while (network.available()) {  // Is there anything ready for us?
-    RF24NetworkHeader header;  // If so, take a look at it
+    RF24NetworkHeader header;    // If so, take a look at it
     payloadSize = network.peek(header);
     packetreceive++;
-    switch (header.from_node) {  // Dispatch the message to the correct handler.
-      case 1:
-        {network.read(header, &databuffer, payloadSize);
-        Serial.println((char)databuffer[0]);
-        datatosend.node1 = atof(databuffer);
-        break;}
-      case n2:
-        {network.read(header, &databuffer, payloadSize);
-        datatosend.node2 = atof(databuffer);
-        break;}
-      case n3:
-        {network.read(header, &databuffer, payloadSize);
-        datatosend.node3 = atof(databuffer);
-        break; }
-      case n4:
-        {network.read(header, &databuffer, payloadSize);
-        datatosend.node4 = atof(databuffer);
-        break;}
-      case n5:
-        {network.read(header, &databuffer, payloadSize);
-        datatosend.node5 = atof(databuffer);
-        break;}
-      case n6:
-        {network.read(header, &databuffer, payloadSize);
-        datatosend.node6 = atof(databuffer);
-        break;}
-      default:
-        {Serial.println(header.from_node);
-        network.read(header, 0, 0);
-        break;}
+    if (header.from_node == n1) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node1 = atof(databuffer);
+    } else if (header.from_node == n2) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node2 = atof(databuffer);
+    } else if (header.from_node == n3) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node3 = atof(databuffer);
+    } else if (header.from_node == n4) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node4 = atof(databuffer);
+    } else if (header.from_node == n5) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node5 = atof(databuffer);
+    } else if (header.from_node == n6) {
+      network.read(header, &databuffer, payloadSize);
+      datatosend.node6 = atof(databuffer);
+    } else {
+      Serial.println(header.from_node);
+      network.read(header, 0, 0);
     }
   }
 }
 
-void requestdata(){
-  if(millis()-timer > interval){
+void requestdata() {
+  if (millis() - timer > interval) {
     timer = millis();
-    if(count++ != 6) packetsent++;
-    switch(count){
-      case 1:{
-        RF24NetworkHeader header2(node01);
-        bool ok = network.write(header2, &datareq, sizeof(datareq));
-        break;}
-      case 2:{
-        RF24NetworkHeader header3(node02);
-        bool ok2 = network.write(header3, &datareq, sizeof(datareq));
-        break;}
-      case 3:{
-        RF24NetworkHeader header4(node03);
-        bool ok3 = network.write(header4, &datareq, sizeof(datareq));
-        break;}
-      case 4:{
-        RF24NetworkHeader header5(node04);
-        bool ok4 = network.write(header5, &datareq, sizeof(datareq));
-        break;}
-      case 5:{
-        RF24NetworkHeader header6(node05);
-        bool ok5 = network.write(header6, &datareq, sizeof(datareq));
-        break;}
-      case 6:{
-        RF24NetworkHeader header7(node06);
-        bool ok6 = network.write(header7, &datareq, sizeof(datareq));
-        break;}
-      case 7:{
-        Serial.println((String)datatosend.node1 + ","+(String)datatosend.node2+","+(String)datatosend.node3+","+(String)datatosend.node4+","+(String)datatosend.node5+","+(String)datatosend.node6+","+(String)flow);
-        count=0;
-        break;}
+    if (count++ != 6) packetsent++;
+    switch (count) {
+      case 1:
+        {
+          RF24NetworkHeader header2(node01);
+          bool ok = network.write(header2, &datareq, sizeof(datareq));
+          break;
+        }
+      case 2:
+        {
+          RF24NetworkHeader header3(node02);
+          bool ok2 = network.write(header3, &datareq, sizeof(datareq));
+          break;
+        }
+      case 3:
+        {
+          RF24NetworkHeader header4(node03);
+          bool ok3 = network.write(header4, &datareq, sizeof(datareq));
+          break;
+        }
+      case 4:
+        {
+          RF24NetworkHeader header5(node04);
+          bool ok4 = network.write(header5, &datareq, sizeof(datareq));
+          break;
+        }
+      case 5:
+        {
+          RF24NetworkHeader header6(node05);
+          bool ok5 = network.write(header6, &datareq, sizeof(datareq));
+          break;
+        }
+      case 6:
+        {
+          RF24NetworkHeader header7(node06);
+          bool ok6 = network.write(header7, &datareq, sizeof(datareq));
+          break;
+        }
+      case 7:
+        {
+          Serial.println((String)datatosend.node1 + "," + (String)datatosend.node2 + "," + (String)datatosend.node3 + "," + (String)datatosend.node4 + "," + (String)datatosend.node5 + "," + (String)datatosend.node6 + "," + (String)flow);
+          count = 0;
+          break;
+        }
     }
   }
 }
@@ -181,50 +186,54 @@ void PulseCount() {
   NumPulses++;
 }
 
-void handlingappendeddata(){
-  while(network.available()){
+void handlingappendeddata() {
+  while (network.available()) {
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
     memset(databuffer, 0, sizeof(databuffer));
     packetreceive++;
     switch (header.from_node) {
       case 1:
-        {network.read(header,&databuffer,payloadSize);
-        delay(100);
-        Serial.write((char)databuffer);
-        Serial.println(","+(String)flow);
-        break;}
+        {
+          network.read(header, &databuffer, payloadSize);
+          delay(100);
+          Serial.print((char)databuffer+",");
+          Serial.println(flow,2);
+          break;
+        }
       default:
-        {network.read(header, 0,0);}
+        {
+          network.read(header, 0, 0);
+        }
         break;
     }
   }
 }
 
-void ambildatapower(){
-  if(millis()-timer2 > samplingtime){
+void ambildatapower() {
+  if (millis() - timer2 > samplingtime) {
     pwr = ina.readBusPower();
-    energy += pwr/(3600000/samplingtime);
+    energy += pwr / (3600000 / samplingtime);
   }
 }
 
-void tampillcd(){
-   lcd.setCursor(0, 0);
-   lcd.print("P:");
-   lcd.setCursor(2, 0);
-   lcd.print(energy,2);
-   lcd.setCursor(8, 0);
-   lcd.print("S:");
-   lcd.setCursor(10,0);
-   lcd.print(packetsent);
-   lcd.setCursor(0, 1);
-   lcd.print("R:");
-   lcd.setCursor(2, 1);
-   lcd.print(packetreceive);
-   lcd.setCursor(8, 1);
-   lcd.print("F:");
-   lcd.setCursor(10,1);
-   lcd.print(flow,2);
+void tampillcd() {
+  lcd.setCursor(0, 0);
+  lcd.print("P:");
+  lcd.setCursor(2, 0);
+  lcd.print(energy, 2);
+  lcd.setCursor(8, 0);
+  lcd.print("S:");
+  lcd.setCursor(10, 0);
+  lcd.print(packetsent);
+  lcd.setCursor(0, 1);
+  lcd.print("R:");
+  lcd.setCursor(2, 1);
+  lcd.print(packetreceive);
+  lcd.setCursor(8, 1);
+  lcd.print("F:");
+  lcd.setCursor(10, 1);
+  lcd.print(flow, 2);
 }
 
 void setup() {
