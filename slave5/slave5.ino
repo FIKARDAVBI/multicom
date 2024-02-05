@@ -72,6 +72,7 @@ int packetsent = 0;
 int packetreceive = 0;
 volatile int NumPulses = 0;
 unsigned long prevmillis;
+unsigned char flowstr[10];
 
 void handlingdata(){
   while (network.available()) {  // Is there anything ready for us?
@@ -85,9 +86,10 @@ void handlingdata(){
         {network.read(header,&databuffer,payloadSize);
         delay(100);
         RF24NetworkHeader header2(master);
-        sprintf(datatosend,"%f",flow);
+        dtostrf(flow,sizeof(flow),2,datatosend);
+        bool ok = false;
+        while(!ok) ok = network.write(header2,&datatosend,sizeof(datatosend));
         packetsent++;
-        bool ok = network.write(header2,&datatosend,sizeof(datatosend));
         break;}
       default:
         {network.read(header, 0,0);}
@@ -106,11 +108,13 @@ void appendforward(){
     switch (header.from_node) {
       case prevnode:
         {network.read(header,&databuffer,payloadSize);
-        sprintf(datatosend,"%s,%f",databuffer,flow);
+        dtostrf(flow,sizeof(flow),2,flowstr);
+        sprintf(datatosend,"%s,%s",databuffer,flowstr);
         delay(100);
         RF24NetworkHeader header3(node04);
+        bool ok2 = false;
+        while(!ok2) ok2 = network.write(header3,&datatosend,sizeof(datatosend));
         packetsent++;
-        bool ok = network.write(header3,&datatosend,sizeof(datatosend));
         break;}
       default:
         {network.read(header, 0,0);}

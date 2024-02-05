@@ -72,21 +72,21 @@ int packetsent = 0;
 int packetreceive = 0;
 volatile int NumPulses = 0;
 unsigned long prevmillis;
+unsigned char flowstr[10];
 
 void handlingdata(){
   while (network.available()) {  // Is there anything ready for us?
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
-    memset(datatosend, 0, sizeof(datatosend));
     packetreceive++;
     switch (header.from_node) {
       case 00:
         {network.read(header,&databuffer,payloadSize);
-        sprintf(datatosend,"%f",flow);
+        dtostrf(flow,sizeof(flow),2,datatosend);
         delay(100);
         RF24NetworkHeader header2(master);
-        bool ok = network.write(header2,&datatosend,sizeof(datatosend));
+        bool ok = false;
+        while(!ok) ok = network.write(header2,&datatosend,sizeof(datatosend));
         packetsent++;
         break;}
       default:
@@ -100,16 +100,16 @@ void appendforward(){
   while(network.available()){
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
-    memset(datatosend, 0, sizeof(datatosend));
     packetreceive++;
     switch (header.from_node) {
       case prevnode:
         {network.read(header,&databuffer,payloadSize);
-        sprintf(datatosend,"%s,%f",databuffer,flow);
+        dtostrf(flow,sizeof(flow),2,flowstr);
+        sprintf(datatosend,"%s,%s",databuffer,flowstr);
         delay(100);
         RF24NetworkHeader header3(node03);
-        bool ok = network.write(header3,&datatosend,sizeof(datatosend));
+        bool ok2 = false;
+        while(!ok2) ok2 = network.write(header3,&datatosend,sizeof(datatosend));
         packetsent++;
         break;}
       default:

@@ -79,17 +79,16 @@ void handlingdata() {
     RF24NetworkHeader header;    // If so, take a look at it
     payloadSize = network.peek(header);
     packetreceive++;
-    memset(databuffer, 0, sizeof(databuffer));
-    memset(datatosend, 0, sizeof(datatosend));
     switch (header.from_node) {
       case 00:
         {
           network.read(header, &databuffer, payloadSize);
-          sprintf(datatosend, "%f", flow);
-          delay(100);
+          dtostrf(flow,sizeof(flow),2,datatosend);
+          delay(200);
           RF24NetworkHeader header2(master);
+          bool ok = false;
+          while(!ok) ok = network.write(header2, &datatosend, sizeof(datatosend));
           packetsent++;
-          bool ok = network.write(header2, &datatosend, sizeof(datatosend));
           break;
         }
       default:
@@ -173,11 +172,10 @@ void loop() {
 #else
   if (milis() - timer > interval) {
     timer = millis();
-    memset(datatosend, 0, sizeof(datatosend));
-    sprintf(datatosend, "%f", flow);
+    dtostrf(flow,sizeof(flow),2,datatosend);
     RF24NetworkHeader header3(node05);
-    packetsent++;
     bool ok2 = network.write(header3, &datatosend, sizeof(datatosend));
+    packetsent++;
   }
 #endif
   ambildatapower();

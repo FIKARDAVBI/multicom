@@ -29,7 +29,7 @@ const uint16_t node03 = 011;
 const uint16_t node04 = 021;
 const uint16_t node05 = 012;
 const uint16_t node06 = 022;
-const uint16_t n1 = 1;
+const uint8_t n1 = 1;
 const uint8_t n2 = 2;
 const uint8_t n3 = 9;
 const uint8_t n4 = 17;
@@ -73,7 +73,7 @@ uint16_t payloadSize;
 unsigned long timer;
 unsigned long timer2;
 int count = 0;
-int interval = 1000;
+int interval = 4000;
 const int samplingtime = 100;
 int packetsent = 0;
 int packetreceive = 0;
@@ -174,7 +174,8 @@ void requestdata() {
         }
       case 7:
         {
-          Serial.println((String)datatosend.node1 + "," + (String)datatosend.node2 + "," + (String)datatosend.node3 + "," + (String)datatosend.node4 + "," + (String)datatosend.node5 + "," + (String)datatosend.node6 + "," + (String)flow);
+          Serial.print((String)datatosend.node1 + "," + (String)datatosend.node2 + "," + (String)datatosend.node3 + "," + (String)datatosend.node4 + "," + (String)datatosend.node5 + "," + (String)datatosend.node6 + ",");
+          Serial.println(flow,2);
           count = 0;
           break;
         }
@@ -190,7 +191,6 @@ void handlingappendeddata() {
   while (network.available()) {
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
     packetreceive++;
     switch (header.from_node) {
       case 1:
