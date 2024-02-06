@@ -115,7 +115,6 @@ void appendforward() {
         {
           dtostrf(flow, sizeof(flow), 2, flowstr);
           sprintf(datatosend, "%s,%s", databuffer, flowstr);
-          delay(200);
           RF24NetworkHeader header3(master);
           bool ok2 = false;
           flag = 0;

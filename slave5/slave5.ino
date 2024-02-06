@@ -73,52 +73,66 @@ int packetreceive = 0;
 volatile int NumPulses = 0;
 unsigned long prevmillis;
 unsigned char flowstr[10];
+int flag;
+const int numboftry = 15;
 
-void handlingdata(){
+void handlingdata() {
   while (network.available()) {  // Is there anything ready for us?
-    RF24NetworkHeader header;  // If so, take a look at it
+    RF24NetworkHeader header;    // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
-    memset(datatosend, 0, sizeof(datatosend));
+    network.read(header, &databuffer, payloadSize);
     packetreceive++;
     switch (header.from_node) {
       case 00:
-        {network.read(header,&databuffer,payloadSize);
-        delay(100);
-        RF24NetworkHeader header2(master);
-        dtostrf(flow,sizeof(flow),2,datatosend);
-        bool ok = false;
-        while(!ok) ok = network.write(header2,&datatosend,sizeof(datatosend));
-        packetsent++;
-        break;}
+        {
+          RF24NetworkHeader header2(master);
+          dtostrf(flow, sizeof(flow), 2, datatosend);
+          bool ok = false;
+          flag = 0;
+          while (!ok && flag < numboftry) {
+            ok = network.write(header2, &datatosend, strlen(datatosend));
+            flag++;
+            delayMicroseconds(50);
+          }
+          if (ok) packetsent++;
+          break;
+        }
       default:
-        {network.read(header, 0,0);}
-        break;
+        {
+          network.read(header, 0, 0);
+          break;
+        }
     }
   }
 }
 
-void appendforward(){
-  while(network.available()){
+void appendforward() {
+  while (network.available()) {
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
-    memset(databuffer, 0, sizeof(databuffer));
-    memset(datatosend, 0, sizeof(datatosend));
+    network.read(header, &databuffer, payloadSize);
     packetreceive++;
     switch (header.from_node) {
       case prevnode:
-        {network.read(header,&databuffer,payloadSize);
-        dtostrf(flow,sizeof(flow),2,flowstr);
-        sprintf(datatosend,"%s,%s",databuffer,flowstr);
-        delay(100);
-        RF24NetworkHeader header3(node04);
-        bool ok2 = false;
-        while(!ok2) ok2 = network.write(header3,&datatosend,sizeof(datatosend));
-        packetsent++;
-        break;}
+        {
+          dtostrf(flow, sizeof(flow), 2, flowstr);
+          sprintf(datatosend, "%s,%s", databuffer, flowstr);
+          RF24NetworkHeader header3(node04);
+          bool ok2 = false;
+          flag = 0;
+          while (!ok2 && flag < numboftry) {
+            ok2 = network.write(header3, &datatosend, strlen(datatosend));
+            flag++;
+            delayMicroseconds(50);
+          }
+          if (ok2) packetsent++;
+          break;
+        }
       default:
-        {network.read(header, 0,0);}
-        break;
+        {
+          network.read(header, 0, 0);
+          break;
+        }
     }
   }
 }
@@ -127,30 +141,30 @@ void PulseCount() {
   NumPulses++;
 }
 
-void ambildatapower(){
-  if(millis()-timer2 > samplingtime){
+void ambildatapower() {
+  if (millis() - timer2 > samplingtime) {
     pwr = ina.readBusPower();
-    energy += pwr/(3600000/samplingtime);
+    energy += pwr / (3600000 / samplingtime);
   }
 }
 
-void tampillcd(){
-   lcd.setCursor(0, 0);
-   lcd.print("P:");
-   lcd.setCursor(2, 0);
-   lcd.print(energy,2);
-   lcd.setCursor(8, 0);
-   lcd.print("S:");
-   lcd.setCursor(10,0);
-   lcd.print(packetsent);
-   lcd.setCursor(0, 1);
-   lcd.print("R:");
-   lcd.setCursor(2, 1);
-   lcd.print(packetreceive);
-   lcd.setCursor(8, 1);
-   lcd.print("F:");
-   lcd.setCursor(10,1);
-   lcd.print(flow,2);
+void tampillcd() {
+  lcd.setCursor(0, 0);
+  lcd.print("P:");
+  lcd.setCursor(2, 0);
+  lcd.print(energy, 2);
+  lcd.setCursor(8, 0);
+  lcd.print("S:");
+  lcd.setCursor(10, 0);
+  lcd.print(packetsent);
+  lcd.setCursor(0, 1);
+  lcd.print("R:");
+  lcd.setCursor(2, 1);
+  lcd.print(packetreceive);
+  lcd.setCursor(8, 1);
+  lcd.print("F:");
+  lcd.setCursor(10, 1);
+  lcd.print(flow, 2);
 }
 void setup() {
 #ifdef sensorflow

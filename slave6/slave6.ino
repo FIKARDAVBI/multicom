@@ -72,30 +72,36 @@ unsigned long prevmillis;
 int packetsent = 0;
 int packetreceive = 0;
 volatile int NumPulses = 0;
+int flag;
+const int numboftry = 15;
 
 
 void handlingdata() {
   while (network.available()) {  // Is there anything ready for us?
     RF24NetworkHeader header;    // If so, take a look at it
     payloadSize = network.peek(header);
+    network.read(header, &databuffer, payloadSize);
     packetreceive++;
     switch (header.from_node) {
       case 00:
         {
-          network.read(header, &databuffer, payloadSize);
-          dtostrf(flow,sizeof(flow),2,datatosend);
-          delay(200);
+          dtostrf(flow, sizeof(flow), 2, datatosend);
           RF24NetworkHeader header2(master);
           bool ok = false;
-          while(!ok) ok = network.write(header2, &datatosend, sizeof(datatosend));
-          packetsent++;
+          flag = 0;
+          while (!ok && flag < numboftry) {
+            ok = network.write(header2, &datatosend, strlen(datatosend));
+            flag++;
+            delayMicroseconds(50);
+          }
+          if (ok) packetsent++;
           break;
         }
       default:
         {
           network.read(header, 0, 0);
+          break;
         }
-        break;
     }
   }
 }
@@ -123,7 +129,7 @@ void tampillcd() {
   lcd.setCursor(8, 1);
   lcd.print("F:");
   lcd.setCursor(10, 1);
-  lcd.print(flow,2);
+  lcd.print(flow, 2);
 }
 
 void PulseCount() {
@@ -172,10 +178,16 @@ void loop() {
 #else
   if (milis() - timer > interval) {
     timer = millis();
-    dtostrf(flow,sizeof(flow),2,datatosend);
+    dtostrf(flow, sizeof(flow), 2, datatosend);
     RF24NetworkHeader header3(node05);
-    bool ok2 = network.write(header3, &datatosend, sizeof(datatosend));
-    packetsent++;
+    flag = 0;
+    bool ok2 = false;
+    while (!ok2 && flag < numboftry) {
+      ok2 = network.write(header3, &datatosend, strlen(datatosend));
+      flag++;
+      delayMicroseconds(50);
+    }
+    if (ok2) packetsent++;
   }
 #endif
   ambildatapower();

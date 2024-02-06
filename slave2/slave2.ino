@@ -72,7 +72,7 @@ volatile int NumPulses = 0;
 unsigned long prevmillis;
 unsigned char flowstr[10];
 int flag;
-const int numboftry;
+const int numboftry = 15;
 
 void handlingdata() {
   while (network.available()) {  // Is there anything ready for us?
@@ -87,7 +87,7 @@ void handlingdata() {
           RF24NetworkHeader header2(master);
           bool ok = false;
           flag = 0;
-          while (!ok && flag < 5) {
+          while (!ok && flag < numboftry) {
             ok = network.write(header2, &datatosend, strlen(datatosend));
             flag++;
             delayMicroseconds(50);
@@ -115,11 +115,10 @@ void appendforward() {
         {
           dtostrf(flow, sizeof(flow), 2, flowstr);
           sprintf(datatosend, "%s,%s", databuffer, flowstr);
-          delay(200);
           RF24NetworkHeader header3(node01);
           bool ok2 = false;
           flag = 0;
-          while (!ok2 && flag < 5) {
+          while (!ok2 && flag < numboftry) {
             ok2 = network.write(header3, &datatosend, strlen(datatosend));
             flag++;
             delayMicroseconds(50);
