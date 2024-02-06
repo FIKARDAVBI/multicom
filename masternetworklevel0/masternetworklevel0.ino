@@ -73,7 +73,9 @@ uint16_t payloadSize;
 unsigned long timer;
 unsigned long timer2;
 int count = 0;
-int interval = 4000;
+int flag;
+const int numboftry = 10;
+int interval = 2000;
 const int samplingtime = 100;
 int packetsent = 0;
 int packetreceive = 0;
@@ -102,27 +104,22 @@ datatosend_t datatosend;
 
 
 void handlingdata() {
-  while (network.available()) {  // Is there anything ready for us?
+  while (network.available()>0) {  // Is there anything ready for us?
     RF24NetworkHeader header;    // If so, take a look at it
     payloadSize = network.peek(header);
+    network.read(header, &databuffer, payloadSize);
     packetreceive++;
     if (header.from_node == n1) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node1 = atof(databuffer);
     } else if (header.from_node == n2) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node2 = atof(databuffer);
     } else if (header.from_node == n3) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node3 = atof(databuffer);
     } else if (header.from_node == n4) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node4 = atof(databuffer);
     } else if (header.from_node == n5) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node5 = atof(databuffer);
     } else if (header.from_node == n6) {
-      network.read(header, &databuffer, payloadSize);
       datatosend.node6 = atof(databuffer);
     } else {
       Serial.println(header.from_node);
@@ -134,48 +131,84 @@ void handlingdata() {
 void requestdata() {
   if (millis() - timer > interval) {
     timer = millis();
-    if (count++ != 6) packetsent++;
+    count++;
     switch (count) {
       case 1:
         {
           RF24NetworkHeader header2(node01);
-          bool ok = network.write(header2, &datareq, sizeof(datareq));
+          bool ok1 = false;
+          flag = 0;
+          while (!ok1 && flag < numboftry) {
+            ok1 = network.write(header2, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if (ok1) packetsent++;
           break;
         }
       case 2:
         {
           RF24NetworkHeader header3(node02);
-          bool ok2 = network.write(header3, &datareq, sizeof(datareq));
+          flag = 0;
+          bool ok2 = false;
+          while (!ok2 && flag < numboftry) {
+            ok2 = network.write(header3, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if (ok2) packetsent++;
           break;
         }
       case 3:
         {
           RF24NetworkHeader header4(node03);
-          bool ok3 = network.write(header4, &datareq, sizeof(datareq));
+          bool ok3 = false;
+          flag = 0;
+          while (!ok3 && flag < numboftry) {
+            ok3 = network.write(header4, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if (ok3) packetsent++;
           break;
         }
       case 4:
         {
           RF24NetworkHeader header5(node04);
-          bool ok4 = network.write(header5, &datareq, sizeof(datareq));
+          bool ok4 = false;
+          flag = 0;
+          while (!ok4 && flag < numboftry) {
+            ok4 = network.write(header5, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if (ok4) packetsent++;
           break;
         }
       case 5:
         {
           RF24NetworkHeader header6(node05);
-          bool ok5 = network.write(header6, &datareq, sizeof(datareq));
+          bool ok5 = false;
+          flag = 0;
+          while (!ok5 && flag < numboftry) {
+            ok5 = network.write(header6, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if (ok5) packetsent++;
           break;
         }
       case 6:
         {
           RF24NetworkHeader header7(node06);
-          bool ok6 = network.write(header7, &datareq, sizeof(datareq));
+          bool ok6 = false;
+          flag = 0;
+          while (!ok6 && flag < numboftry) {
+            ok6 = network.write(header7, &datareq, sizeof(datareq));
+            flag++;
+          }
+          if(ok6) packetsent++;
           break;
         }
       case 7:
         {
           Serial.print((String)datatosend.node1 + "," + (String)datatosend.node2 + "," + (String)datatosend.node3 + "," + (String)datatosend.node4 + "," + (String)datatosend.node5 + "," + (String)datatosend.node6 + ",");
-          Serial.println(flow,2);
+          Serial.println(flow, 2);
           count = 0;
           break;
         }
@@ -197,15 +230,15 @@ void handlingappendeddata() {
         {
           network.read(header, &databuffer, payloadSize);
           delay(100);
-          Serial.print((char)databuffer+",");
-          Serial.println(flow,2);
+          Serial.print((char)databuffer + ",");
+          Serial.println(flow, 2);
           break;
         }
       default:
         {
           network.read(header, 0, 0);
+          break;
         }
-        break;
     }
   }
 }
@@ -252,6 +285,7 @@ void setup() {
   lcd.clear();
   SPI.begin();
   radio.begin();
+  radio.setPALevel(RF24_PA_MAX,1);
   network.begin(90, this_node);  //(channel, node address)
   radio.setDataRate(RF24_2MBPS);
   Serial.begin(9600);

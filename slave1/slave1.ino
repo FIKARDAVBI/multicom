@@ -13,31 +13,31 @@ float pwr;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-RF24 radio(10, 9);               // nRF24L01 (CE,CSN)
-RF24Network network(radio);      // Include the radio in the network
+RF24 radio(10, 9);           // nRF24L01 (CE,CSN)
+RF24Network network(radio);  // Include the radio in the network
 
-#define topology_T //T untuk Tree, 
-//#define topology_S //S untuk Star, 
+#define topology_T  //T untuk Tree,
+//#define topology_S //S untuk Star,
 //#define topology_D //D untuk tree lain
-#define protocol_R //R untuk request based timer
+#define protocol_R  //R untuk request based timer
 //#define protocol_B //B untuk round robin and append
 const uint16_t master = 00;
 const uint16_t this_node = 01;
-#ifdef topology_T // konfigurasi address topology tree
+#ifdef topology_T  // konfigurasi address topology tree
 const uint8_t prevnode = 2;
 const uint16_t node02 = 02;
 const uint16_t node03 = 011;
 const uint16_t node04 = 021;
 const uint16_t node05 = 012;
 const uint16_t node06 = 022;
-#elif defined(topology_S) // konfigurasi address topology star  
+#elif defined(topology_S)  // konfigurasi address topology star
 const uint8_t prevnode = 2;
 const uint16_t node02 = 02;
 const uint16_t node03 = 03;
 const uint16_t node04 = 04;
 const uint16_t node05 = 05;
 const uint16_t node06 = 015;
-#else // konfigurasi address topology tree lainnya   
+#else                      // konfigurasi address topology tree lainnya
 const uint8_t prevnode = 2;
 const uint16_t node02 = 02;
 const uint16_t node03 = 011;
@@ -50,7 +50,7 @@ const uint16_t node06 = 0112;
 //#define sensorflow
 
 const unsigned long interval = 500;  //ms  // How often to send data to the other unit
-unsigned long last_sent;            // When did we last send?
+unsigned long last_sent;             // When did we last send?
 unsigned char databuffer[MAX_PAYLOAD_SIZE];
 unsigned char datatosend[MAX_PAYLOAD_SIZE];
 uint16_t payloadSize;
@@ -71,48 +71,67 @@ int packetreceive = 0;
 volatile int NumPulses = 0;
 unsigned long prevmillis;
 unsigned char flowstr[10];
+int flag;
+const int numboftry = 15;
 
-void handlingdata(){
-  while (network.available()) {  // Is there anything ready for us?
-    RF24NetworkHeader header;  // If so, take a look at it
+void handlingdata() {
+  while (network.available() > 0) {  // Is there anything ready for us?
+    RF24NetworkHeader header;        // If so, take a look at it
     payloadSize = network.peek(header);
-    packetreceive++;
+    network.read(header, &databuffer, payloadSize);
     switch (header.from_node) {
       case 00:
-        {network.read(header,&databuffer,payloadSize);
-        dtostrf(flow,sizeof(flow),2,datatosend);
-        delay(200);
-        RF24NetworkHeader header2(master);
-        bool ok = false;
-        while(!ok) ok = network.write(header2,&datatosend,sizeof(datatosend));
-        packetsent++;
-        break;}
+        {
+          packetreceive++;
+          dtostrf(flow, sizeof(flow), 2, datatosend);
+          RF24NetworkHeader header2(master);
+          bool ok = false;
+          flag = 0;
+          while (!ok && flag < numboftry) {
+            ok = network.write(header2, &datatosend, strlen(datatosend));
+            flag++;
+            delayMicroseconds(50);
+          }
+          if (ok) packetsent++;
+          break;
+        }
       default:
-        {network.read(header, 0,0);}
-        break;
+        {
+          network.read(header, 0, 0);
+          break;
+        }
     }
   }
 }
 
-void appendforward(){
-  while(network.available()){
+void appendforward() {
+  while (network.available()) {
     RF24NetworkHeader header;  // If so, take a look at it
     payloadSize = network.peek(header);
+    network.read(header, &databuffer, payloadSize);
     packetreceive++;
     switch (header.from_node) {
       case prevnode:
-        {network.read(header,&databuffer,payloadSize);
-        dtostrf(flow,sizeof(flow),2,flowstr);
-        sprintf(datatosend,"%s,%s",databuffer,flowstr);
-        delay(200);
-        RF24NetworkHeader header3(master);
-        bool ok2 = false;
-        while(!ok2) ok2 = network.write(header3,&datatosend,sizeof(datatosend));
-        packetsent++;
-        break;}
+        {
+          dtostrf(flow, sizeof(flow), 2, flowstr);
+          sprintf(datatosend, "%s,%s", databuffer, flowstr);
+          delay(200);
+          RF24NetworkHeader header3(master);
+          bool ok2 = false;
+          flag = 0;
+          while (!ok2 && flag < numboftry) {
+            ok2 = network.write(header3, &datatosend, strlen(datatosend));
+            flag++;
+            delayMicroseconds(50);
+          }
+          if(ok2) packetsent++;
+          break;
+        }
       default:
-        {network.read(header, 0,0);}
-        break;
+        {
+          network.read(header, 0, 0);
+          break;
+        }
     }
   }
 }
@@ -121,30 +140,30 @@ void PulseCount() {
   NumPulses++;
 }
 
-void ambildatapower(){
-  if(millis()-timer2 > samplingtime){
+void ambildatapower() {
+  if (millis() - timer2 > samplingtime) {
     pwr = ina.readBusPower();
-    energy += pwr/(3600000/samplingtime);
+    energy += pwr / (3600000 / samplingtime);
   }
 }
 
-void tampillcd(){
-   lcd.setCursor(0, 0);
-   lcd.print("P:");
-   lcd.setCursor(2, 0);
-   lcd.print(energy,2);
-   lcd.setCursor(8, 0);
-   lcd.print("S:");
-   lcd.setCursor(10,0);
-   lcd.print(packetsent);
-   lcd.setCursor(0, 1);
-   lcd.print("R:");
-   lcd.setCursor(2, 1);
-   lcd.print(packetreceive);
-   lcd.setCursor(8, 1);
-   lcd.print("F:");
-   lcd.setCursor(10,1);
-   lcd.print(flow,2);
+void tampillcd() {
+  lcd.setCursor(0, 0);
+  lcd.print("P:");
+  lcd.setCursor(2, 0);
+  lcd.print(energy, 2);
+  lcd.setCursor(8, 0);
+  lcd.print("S:");
+  lcd.setCursor(10, 0);
+  lcd.print(packetsent);
+  lcd.setCursor(0, 1);
+  lcd.print("R:");
+  lcd.setCursor(2, 1);
+  lcd.print(packetreceive);
+  lcd.setCursor(8, 1);
+  lcd.print("F:");
+  lcd.setCursor(10, 1);
+  lcd.print(flow, 2);
 }
 
 void setup() {
@@ -160,12 +179,14 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("Node1");
   delay(1000);
+  Serial.begin(9600);
   lcd.clear();
   SPI.begin();
   radio.begin();
+  radio.setPALevel(RF24_PA_MAX, 1);
   network.begin(90, this_node);  //(channel, node address)
   radio.setDataRate(RF24_2MBPS);
-  timer2=millis();
+  timer2 = millis();
   prevmillis = micros();
 }
 
