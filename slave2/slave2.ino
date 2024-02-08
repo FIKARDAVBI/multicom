@@ -19,8 +19,8 @@ RF24Network network(radio);  // Include the radio in the network
 #define topology_T  //T untuk Tree,
 //#define topology_S //S untuk Star,
 //#define topology_D //D untuk tree lain
-#define protocol_R  //R untuk request based timer
-//#define protocol_B //B untuk round robin and append
+//#define protocol_R  //R untuk request based timer
+#define protocol_B //B untuk round robin and append
 const uint16_t master = 00;
 const uint16_t this_node = 02;
 #ifdef topology_T  // konfigurasi address topology tree

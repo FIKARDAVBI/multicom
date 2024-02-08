@@ -19,8 +19,8 @@ RF24Network network(radio);  // Include the radio in the network
 #define topology_T  //T untuk Tree,
 //#define topology_S //S untuk Star,
 //#define topology_D //D untuk tree lain
-#define protocol_R  //R untuk request based timer
-//#define protocol_B //B untuk round robin and append
+//#define protocol_R  //R untuk request based timer
+#define protocol_B //B untuk round robin and append
 
 unsigned long timer;
 
@@ -176,7 +176,7 @@ void loop() {
 #ifdef protocol_R
   handlingdata();
 #else
-  if (milis() - timer > interval) {
+  if (millis() - timer > interval) {
     timer = millis();
     dtostrf(flow, sizeof(flow), 2, datatosend);
     RF24NetworkHeader header3(node05);

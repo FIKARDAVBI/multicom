@@ -10,8 +10,8 @@
 #define topology_T  //T untuk Tree,
 //#define topology_S //S untuk Star,
 //#define topology_D //D untuk tree lain
-#define protocol_R  //R untuk request based timer up dan downlink
-//#define protocol_B //B untuk roundrobin and append hanya uplink
+//#define protocol_R  //R untuk request based timer up dan downlink
+#define protocol_B //B untuk roundrobin and append hanya uplink
 #include <LiquidCrystal_I2C.h>
 
 const uint16_t this_node = 00;
@@ -58,7 +58,7 @@ const uint16_t node06 = 0112;
 const uint8_t n1 = 1;
 const uint8_t n2 = 2;
 const uint8_t n3 = 9;
-const uint8_t n4 = 17;
+const uint8_t n4 = 10;
 const uint8_t n5 = 73;
 const uint8_t n6 = 74;
 #endif
@@ -123,7 +123,6 @@ void handlingdata() {
       datatosend.node6 = atof(databuffer);
     } else {
       Serial.println(header.from_node);
-      network.read(header, 0, 0);
     }
   }
 }
@@ -207,7 +206,7 @@ void requestdata() {
         }
       case 7:
         {
-          Serial.print((String)datatosend.node1 + "," + (String)datatosend.node2 + "," + (String)datatosend.node3 + "," + (String)datatosend.node4 + "," + (String)datatosend.node5 + "," + (String)datatosend.node6 + ",");
+          Serial.print((String)datatosend.node6 + "," + (String)datatosend.node5 + "," + (String)datatosend.node4 + "," + (String)datatosend.node3 + "," + (String)datatosend.node2 + "," + (String)datatosend.node1 + ",");
           Serial.println(flow, 2);
           count = 0;
           break;
@@ -230,7 +229,8 @@ void handlingappendeddata() {
         {
           network.read(header, &databuffer, payloadSize);
           delay(100);
-          Serial.print((char)databuffer + ",");
+          Serial.print((char*)databuffer);
+          Serial.print(",");
           Serial.println(flow, 2);
           break;
         }
