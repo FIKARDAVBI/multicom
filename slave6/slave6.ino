@@ -152,8 +152,9 @@ void setup() {
   lcd.clear();
   SPI.begin();
   radio.begin();
-  network.begin(90, this_node);  //(channel, node address)
+  radio.setPALevel(RF24_PA_MAX,1);
   radio.setDataRate(RF24_2MBPS);
+  network.begin(90, this_node);  //(channel, node address)
   timer = millis();
   timer2 = millis();
   prevmillis = micros();

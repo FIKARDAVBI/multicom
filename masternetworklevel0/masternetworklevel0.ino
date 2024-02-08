@@ -286,8 +286,8 @@ void setup() {
   SPI.begin();
   radio.begin();
   radio.setPALevel(RF24_PA_MAX,1);
-  network.begin(90, this_node);  //(channel, node address)
   radio.setDataRate(RF24_2MBPS);
+  network.begin(90, this_node);  //(channel, node address)
   Serial.begin(9600);
   timer = millis();
   timer2 = millis();
