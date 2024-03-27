@@ -7,9 +7,9 @@
 #define inaaddress 0x40
 #define button 2
 #define led A3
-#define topology_T  //T untuk Tree,
+//#define topology_T  //T untuk Tree,
 //#define topology_S //S untuk Star,
-//#define topology_D //D untuk tree lain
+#define topology_D //D untuk tree lain
 //#define protocol_R  //R untuk request based timer up dan downlink
 #define protocol_B //B untuk roundrobin and append hanya uplink
 #include <LiquidCrystal_I2C.h>

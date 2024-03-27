@@ -16,9 +16,9 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 RF24 radio(10, 9);           // nRF24L01 (CE,CSN)
 RF24Network network(radio);  // Include the radio in the network
 
-#define topology_T  //T untuk Tree,
+//#define topology_T  //T untuk Tree,
 //#define topology_S //S untuk Star,
-//#define topology_D //D untuk tree lain
+#define topology_D //D untuk tree lain
 //#define protocol_R  //R untuk request based timer
 #define protocol_B //B untuk round robin and append
 
